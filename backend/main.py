@@ -1,32 +1,51 @@
-import asyncio
-import os
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from ai.nemotron_fal import process_article_and_generate_media
 
 load_dotenv()
 
-async def generate_media_for_article(article_id=None, article_url=None, article_text=None):
-    """Generate media for an article and store it in the database"""
-    result = await process_article_and_generate_media(
-        article_id=article_id,
-        article_url=article_url,
-        article_text=article_text
-    )
-    return result
+app = FastAPI()
 
-async def main():
-    """Main function to run the application"""
-    # Example: Generate media for an article URL
-    test_url = "https://www.lesswrong.com/posts/fJtELFKddJPfAxwKS/natural-emergent-misalignment-from-reward-hacking-in"
-    result = await generate_media_for_article(article_url=test_url)
-    
-    if result:
-        print(f"Successfully generated media for article")
-        print(f"Article ID: {result['article_id']}")
-        print(f"Media ID: {result['media_id']}")
-        print(f"Media URL: {result['media_url']}")
-    else:
-        print("Failed to generate media")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class GenerateRequest(BaseModel):
+    user_id: int| None = None
+    link: str | None = None
+    style: str
+
+
+@app.post("/generate")
+async def generate_media(req: GenerateRequest):
+    """FastAPI endpoint to trigger media generation"""
+    result = await process_article_and_generate_media(
+        article_url=req.link,
+    )
+
+    if not result:
+        return {"success": False, "error": "Failed to generate media"}
+
+    return {
+        "success": True,
+        "article_id": result["article_id"],
+        "media_id": result["media_id"],
+        "media_url": result["media_url"]
+    }
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True
+    )
+
