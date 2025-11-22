@@ -1,3 +1,8 @@
+# Introspect db: 
+```bash
+ npx kysely-codegen --out-file ./lib/db/schema.ts
+ ```
+
 # Knowledge Made Visual
 
 Transform any article, research paper, or blog post into engaging visual content using AI. Convert complex ideas into memorable memes, engaging comics, or simplified explanations.
