@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Kaisei_Tokumin, Inconsolata } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 
-const geistSans = Geist({
+const kaiseiTokumin = Kaisei_Tokumin({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
+const inconsolata = Inconsolata({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
@@ -26,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${kaiseiTokumin.variable} ${inconsolata.variable} antialiased`}
       >
         <SessionProvider>
           {children}
