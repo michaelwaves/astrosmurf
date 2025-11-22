@@ -46,3 +46,40 @@ CREATE TABLE users
   PRIMARY KEY (id)
 );
  
+
+CREATE TABLE articles (
+  id SERIAL PRIMARY KEY,
+  source VARCHAR(200) NOT NULL,
+  text TEXT NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  date_created TIMESTAMPTZ DEFAULT NOW(),
+  date_written TIMESTAMPTZ
+);
+
+CREATE TABLE media (
+  id SERIAL PRIMARY KEY,
+  article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+  prompt TEXT NOT NULL,
+  media_type VARCHAR(50) NOT NULL,  -- 'image', 'video', 'comic', etc.
+  media_url TEXT NOT NULL,
+  date_created TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE socials (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider VARCHAR(50) NOT NULL,   -- 'twitter', 'instagram', etc.
+  account_identifier VARCHAR(255) NOT NULL,
+  access_token TEXT NOT NULL,
+  refresh_token TEXT,
+  expires_at TIMESTAMPTZ
+);
+
+CREATE TABLE posts (
+  id SERIAL PRIMARY KEY,
+  social_account_id INTEGER NOT NULL REFERENCES social_accounts(id) ON DELETE CASCADE,
+  media_id INTEGER NOT NULL REFERENCES generated_media(id) ON DELETE CASCADE,
+  caption TEXT,
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  posted_at TIMESTAMPTZ
+);
