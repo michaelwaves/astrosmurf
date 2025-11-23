@@ -1,6 +1,6 @@
 'use server'
 
-import { mockFirecrawlScrape, mockOrchestrator, mockImageGeneration, ScrapedContent, Concept } from "@/lib/mock-ai";
+import { mockFirecrawlScrape, mockOrchestrator, mockImageGeneration, ScrapedContent, Concept } from "@/lib/ai";
 
 /**
  * Server Actions - API Interface to Backend
@@ -25,7 +25,7 @@ import { mockFirecrawlScrape, mockOrchestrator, mockImageGeneration, ScrapedCont
  */
 export async function scrapeUrlAction(url: string): Promise<ScrapedContent> {
   console.log(`[Action] Initiating scrape for URL: ${url}`);
-  
+
   // In production, this would call your Python backend:
   // const response = await fetch(`${BACKEND_URL}/api/scrape`, {
   //   method: 'POST',
@@ -33,7 +33,7 @@ export async function scrapeUrlAction(url: string): Promise<ScrapedContent> {
   //   body: JSON.stringify({ url })
   // });
   // return await response.json();
-  
+
   try {
     const scraped = await mockFirecrawlScrape(url);
     console.log(`[Action] Scrape successful: ${scraped.title}`);
@@ -51,17 +51,17 @@ export async function scrapeUrlAction(url: string): Promise<ScrapedContent> {
  * Backend returns: Array of { title, description, prompt, visual, tone }
  */
 export async function generateConceptsAction(
-  contentType: string, 
+  contentType: string,
   scraped: ScrapedContent
 ): Promise<Concept[]> {
   console.log(`[Action] Generating concepts for contentType: ${contentType}`);
-  
+
   // Validate contentType
   const validTypes = ['meme', 'comic', 'simplify'];
   if (!validTypes.includes(contentType)) {
     throw new Error(`Invalid contentType: ${contentType}. Must be one of: ${validTypes.join(', ')}`);
   }
-  
+
   // In production, this would call your Python backend:
   // const response = await fetch(`${BACKEND_URL}/api/generate`, {
   //   method: 'POST',
@@ -73,7 +73,7 @@ export async function generateConceptsAction(
   //   })
   // });
   // return await response.json();
-  
+
   try {
     const concepts = await mockOrchestrator(contentType, scraped);
     console.log(`[Action] Generated ${concepts.length} concepts`);
@@ -92,7 +92,7 @@ export async function generateConceptsAction(
  */
 export async function generateImageAction(prompt: string): Promise<string> {
   console.log(`[Action] Generating image for prompt: ${prompt.slice(0, 50)}...`);
-  
+
   // In production, this would call your Python backend:
   // const response = await fetch(`${BACKEND_URL}/api/generate-image`, {
   //   method: 'POST',
@@ -101,7 +101,7 @@ export async function generateImageAction(prompt: string): Promise<string> {
   // });
   // const { imageUrl } = await response.json();
   // return imageUrl;
-  
+
   try {
     const imageUrl = await mockImageGeneration(prompt);
     console.log(`[Action] Image generated successfully`);
@@ -145,9 +145,9 @@ export async function generateContentAction(url: string, category: string) {
 
     const data = await response.json();
     console.log(`[Action] Backend response success:`, data);
-    
+
     if (!data.success) {
-        throw new Error(data.error || "Backend returned failure");
+      throw new Error(data.error || "Backend returned failure");
     }
 
     return data;
