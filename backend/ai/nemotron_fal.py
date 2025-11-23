@@ -8,11 +8,33 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from openai import OpenAI
 import httpx
+import requests
+from markdownify import markdownify as md
 from dotenv import load_dotenv
 import fal_client
 from db.db import store_media, create_article, get_article_by_id
 
 load_dotenv()
+
+def url_to_markdown(url: str) -> str:
+    """Convert a URL to markdown content by fetching and processing the HTML"""
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/127.0.0.1 Safari/537.36"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+        return md(response.text)
+    except Exception as e:
+        print(f"Error fetching or processing URL {url}: {str(e)}")
+        return f"Failed to fetch content from {url}: {str(e)}"
 
 async def generate_prompt(article_content=None, article_url=None):
     """Generate a prompt using the Qwen model based on an article content or URL"""
@@ -30,9 +52,15 @@ async def generate_prompt(article_content=None, article_url=None):
     user_content = "Create a detailed text-to-image prompt for a social media meme"
     
     if article_url:
-        user_content += f" based on this article: {article_url}."
+        # Fetch the actual content of the article and convert to markdown
+        markdown_content = url_to_markdown(article_url)
+        
+        # Use a snippet of the markdown content (first 3000 chars to avoid token limits)
+        content_snippet = markdown_content[:3000] + "..." if len(markdown_content) > 3000 else markdown_content
+        
+        user_content += f" based on this article content from {article_url}:\n\n{content_snippet}"
     elif article_content:
-        user_content += f" based on this article content: '{article_content[:500]}...'."  # Limit to 500 chars for prompt
+        user_content += f" based on this article content: '{article_content[:2000]}...'."  # Limit to 2000 chars for prompt
     else:
         user_content += " based on AI reward hacking concept."
         
@@ -101,11 +129,23 @@ async def process_article_and_generate_media(article_id=None, article_url=None, 
             return None
         article_text = article["text"]
     
-    # If we have URL but no text, create a new article
+    # If we have URL but no text, create a new article with actual content
     elif article_url and not article_text:
-        # Create a new article entry
-        article_row = await create_article(source=article_url, text="URL-based article", user_id=None)
-        article_id = article_row["id"]
+        try:
+            # Fetch article content from URL and store it
+            article_markdown = url_to_markdown(article_url)
+            # Store only first 10000 chars if it's too long
+            stored_text = article_markdown[:10000] + "..." if len(article_markdown) > 10000 else article_markdown
+            
+            # Create article with actual content
+            article_row = await create_article(source=article_url, text=stored_text, user_id=None)
+            article_id = article_row["id"]
+            article_text = stored_text  # Use this for prompt generation
+        except Exception as e:
+            print(f"Failed to fetch content from URL, creating empty article: {str(e)}")
+            # Fallback to empty article
+            article_row = await create_article(source=article_url, text=f"URL-based article (content fetch failed: {str(e)})", user_id=None)
+            article_id = article_row["id"]
     
     # If we have text but no article_id, create a new article
     elif article_text and not article_id:

@@ -7,6 +7,11 @@ load_dotenv()
 
 async def generate_media_for_article(article_id=None, article_url=None, article_text=None):
     """Generate media for an article and store it in the database"""
+    # If we have a URL, print that we're processing it
+    if article_url:
+        print(f"Processing article from URL: {article_url}")
+        print("Fetching content and converting to markdown...")
+    
     result = await process_article_and_generate_media(
         article_id=article_id,
         article_url=article_url,
