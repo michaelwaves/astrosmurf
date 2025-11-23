@@ -134,7 +134,6 @@ async def process_article_and_generate_media(article_url=None, style="meme", use
     
     # Store the media in the database
     media_row = await store_media(
-        article_id=article_id,
         prompt=prompt,
         style=style,
         media_type="image",
@@ -158,7 +157,12 @@ async def main():
     result = await process_article_and_generate_media(article_url=article_url)
     print(result)
 
-    
+async def test():
+    article_url = "https://www.lesswrong.com/posts/fJtELFKddJPfAxwKS/natural-emergent-misalignment-from-reward-hacking-in"
+    res = get_article(article_url)
+    print(res)
+    concepts = await decompose_article(res)
+    print(concepts)
 
 if __name__ == "__main__":
-    asyncio.run(decompose_article())
+    asyncio.run(test())

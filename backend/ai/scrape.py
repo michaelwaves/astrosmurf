@@ -1,4 +1,5 @@
 import requests
+from markdownify import markdownify as md
 def get_article(article_url):
     session = requests.Session()
     session.headers.update({
@@ -11,7 +12,7 @@ def get_article(article_url):
     })
 
     r = session.get(article_url)
-    return r.text
+    return md(r.text)
 
 if __name__ =="__main__":
     get_article("https://www.lesswrong.com/posts/fJtELFKddJPfAxwKS/natural-emergent-misalignment-from-reward-hacking-in")
