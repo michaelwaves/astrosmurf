@@ -106,7 +106,7 @@ def generate_prompt_fast_sync(prompt: str, system_prompt: str):
     """Synchronous NVIDIA call (non-streaming, fast)."""
 
     completion = client.chat.completions.create(
-        model="nvidia/llama-3.1-nemotron-nano-8b-v1",
+        model="qwen/qwen3-next-80b-a3b-thinking",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
