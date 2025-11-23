@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
-import { Kaisei_Tokumin, Inconsolata } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 
-const kaiseiTokumin = Kaisei_Tokumin({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "700", "800"],
-});
-
-const inconsolata = Inconsolata({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
@@ -25,10 +19,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
-        className={`${kaiseiTokumin.variable} ${inconsolata.variable} antialiased`}
+        className={`${inter.variable} antialiased min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground`}
       >
+        {/* Subtle space noise/texture overlay could go here if desired, but keeping it clean for now as per "no fluff" */}
         <SessionProvider>
           {children}
         </SessionProvider>
