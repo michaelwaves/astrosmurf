@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { normalizeUrl, isValidUrl as checkIsValidUrl } from "@/lib/utils"
 import { Sparkles, Image as ImageIcon, BookOpen, Zap, ArrowRight, Loader2, Brain } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Personas } from "@/lib/db/schema"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const contentTypes = {
   meme: {
@@ -21,9 +23,9 @@ const contentTypes = {
     description: "Generate sequential art",
     icon: BookOpen
   },
-  simplify: {
-    label: "Simplify",
-    description: "Reduce to core concepts",
+  photorealistic_image: {
+    label: "Photorealistic",
+    description: "Make photorealistic images",
     icon: Zap
   },
   generate_explanation_video: {
@@ -33,10 +35,11 @@ const contentTypes = {
   }
 }
 
-export function GenerationForm() {
+export function GenerationForm({ personas }: { personas: Personas[] }) {
   const router = useRouter()
   const [url, setUrl] = useState("")
-  const [category, setCategory] = useState<"meme" | "comic" | "simplify">("meme")
+  const [category, setCategory] = useState<"meme" | "comic" | "photorealistic image" | string>("meme")
+  const [personaId, setPersonaId] = useState<string>("")
   const [isValidUrl, setIsValidUrl] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -68,6 +71,7 @@ export function GenerationForm() {
         body: JSON.stringify({
           link: normalized,
           style: category,
+          persona_id: personaId ? parseInt(personaId) : null
         }),
       })
 
@@ -125,18 +129,44 @@ export function GenerationForm() {
               )}
             </div>
           </div>
-          
+
+          <div className="space-y-3">
+            <Label htmlFor="persona" className="text-sm font-medium text-foreground/80">
+              Persona (Optional)
+            </Label>
+            <Select value={personaId} onValueChange={setPersonaId}>
+              <SelectTrigger className="h-12 text-base bg-background/50">
+                <SelectValue placeholder="Select a persona (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {personas.map((persona) => (
+                  //@ts-expect-error description: persona id weird
+                  <SelectItem key={persona.id} value={persona.id.toString()}>
+                    <div className="flex items-center gap-2">
+                      <span>{persona.name}</span>
+                      {persona.description && (
+                        <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                          - {persona.description}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-3">
             <Label className="text-sm font-medium text-foreground/80">Output Format</Label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {Object.entries(contentTypes).map(([key, { label, description, icon: Icon }]) => (
                 <div
                   key={key}
-                  onClick={() => setCategory(key as "meme" | "comic" | "simplify")}
+                  onClick={() => setCategory(key)}
                   className={cn(
                     "cursor-pointer rounded-xl border-2 p-4 transition-all hover:bg-accent/50",
-                    category === key 
-                      ? "border-primary bg-primary/10 ring-1 ring-primary/20" 
+                    category === key
+                      ? "border-primary bg-primary/10 ring-1 ring-primary/20"
                       : "border-border/50 bg-background/20 opacity-70 hover:opacity-100 hover:border-primary/50"
                   )}
                 >
