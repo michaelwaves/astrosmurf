@@ -93,8 +93,21 @@ async def process_article_and_generate_media(persona_id = None, article_url=None
     # Generate prompts for all concepts
     prompts = await generate_multiple_prompts(concepts, style)
     
+    # Validate and filter out empty prompts
+    print(f"\nReceived {len(prompts)} prompts from generation")
+    valid_prompts = [p for p in prompts if p and p.strip()]
+    
+    if len(valid_prompts) < len(prompts):
+        print(f"Warning: {len(prompts) - len(valid_prompts)} empty prompts were filtered out")
+    
+    if not valid_prompts:
+        print("Error: No valid prompts generated")
+        return None
+    
+    print(f"Proceeding with {len(valid_prompts)} valid prompts\n")
+    
     # Generate images for all prompts in parallel
-    image_results = await generate_multiple_images(prompts)
+    image_results = await generate_multiple_images(valid_prompts)
     
     if not image_results or len(image_results) == 0:
         print("Failed to generate any images")
@@ -122,7 +135,7 @@ async def process_article_and_generate_media(persona_id = None, article_url=None
         try:
             media_row = await store_media(
                 article_id=article_id,
-                prompt=prompts[i],
+                prompt=valid_prompts[i],
                 style=style,
                 media_type="image",
                 media_url=media_url
@@ -135,7 +148,7 @@ async def process_article_and_generate_media(persona_id = None, article_url=None
                 "article_id": article_id,
                 "media_id": media_row["id"],
                 "concept": concepts[i],
-                "prompt": prompts[i],
+                "prompt": valid_prompts[i],
                 "media_url": media_url,
                 "image_metadata": image_result["images"][0]
             })

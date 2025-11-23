@@ -37,10 +37,8 @@ async def generate_multiple_prompts(concepts, style="meme"):
         for concept in concepts
     ]
 
-    results = []
-    for coro in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Generating prompts"):
-        result = await coro
-        results.append(result)
+    # Gather all results before returning
+    results = await asyncio.gather(*tasks)
 
     return results
 
