@@ -34,7 +34,7 @@ auth = tweepy.OAuth1UserHandler(
 )
 api = tweepy.API(auth)
 
-media_path = "your_image_or_video.jpg"  # or .png / .mp4
+media_path = "/home/michaelwaves/repos/astrosmurf/backend/x/astrosmurf.jpg"  # or .png / .mp4
 upload = api.media_upload(media_path)
 media_id = upload.media_id_string
 
