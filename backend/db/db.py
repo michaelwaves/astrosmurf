@@ -82,6 +82,11 @@ async def delete_media(media_id):
     query = "DELETE FROM media WHERE id = $1 RETURNING id"
     return await db.fetchrow(query, media_id)
 
+async def get_persona_by_id(persona_id):
+    db = await Database.get_instance()
+    query = "SELECT * FROM personas where id = $1"
+    return await db.fetchrow(query, persona_id)
+
 async def get_media_by_article(article_id):
     """Get all media associated with an article
     

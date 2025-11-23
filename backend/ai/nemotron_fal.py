@@ -12,7 +12,7 @@ from openai import OpenAI
 import httpx
 from dotenv import load_dotenv
 import fal_client
-from db.db import store_media, create_article, get_article_by_id
+from db.db import get_persona_by_id, store_media, create_article, get_article_by_id
 from ai.scrape import get_article
 
 load_dotenv()
@@ -79,10 +79,10 @@ async def create_generation_prompt(concept, max_length, style="meme"):
     prompt = f"""Create a detailed text-to-image prompt for a social media {style}
     
     based on this concept: '{concept[:max_length]}...'.Follow the FLUX framework structure and enhancement layers, with careful attention "
-                    "to word order (most important elements first). Include text overlay that's witty and educational.")
+                    "to word order (most important elements first)")
     """
     system_prompt=f"""You are an expert in creating detailed, creative prompts for text-to-image models that will generate engaging social media {style} following the FLUX Prompt Framework: Subject + Action + Style + Context. Your prompts should use structured descriptions with enhancement layers: Visual Layer (lighting, color palette, composition), Technical Layer (camera settings, lens specs), and Atmospheric Layer (mood, emotional tone). Follow optimal prompt length (30-80 words) and prioritize elements by importance (front-load critical elements). Include specific text integration instructions when needed, placing text in quotation marks with clear placement and style descriptions."""
-    prompt = await generate_prompt(prompt, system_prompt)
+    prompt = await generate_prompt(prompt, system_prompt="")
     return prompt
 
 async def generate_prompt(prompt:str="", system_prompt:str=""):
@@ -105,7 +105,7 @@ async def generate_prompt(prompt:str="", system_prompt:str=""):
         ],
         temperature=0.6,
         top_p=0.7,
-        max_tokens=4096,
+        max_tokens=2048,
         stream=True
     )
 
@@ -148,51 +148,42 @@ async def generate_image(prompt):
     result = await handler.get()
     return result
 
-async def generate_multiple_images(prompts):
-    """Generate multiple images from a list of prompts"""
-    if not prompts or len(prompts) == 0:
-        print("\nError: No prompts provided")
-        return []
-        
-    print(f"\n\nGenerating {len(prompts)} images...\n")
-    
-    # Create tasks for all image generations to run in parallel
-    tasks = [generate_image(prompt) for prompt in prompts]
-    
-    # Wait for all tasks to complete and gather results
-    results = await asyncio.gather(*tasks)
-    
-    # Filter out any failed generations
-    valid_results = [result for result in results if result and "images" in result]
-    
-    return valid_results
+async def generate_image_with_persona(prompt, persona_id):
+    persona = await get_persona_by_id(persona_id)
+    prompt = f"{prompt}"
+    print(persona)
+    print(f"Generating Image with prompt: {prompt}")
+    handler  = await fal_client.submit_async(
+        "fal-ai/alpha-image-232/edit-image",
+        arguments={
+            "image_urls": [persona["image_url"]],
+            "prompt": prompt
+        },
+    )
 
-async def process_article_and_generate_media(article_url=None, style="meme", user_id=1):
+    async for event in handler.iter_events(with_logs=True):
+        print(event)
+
+    result = await handler.get()
+
+    print(result)
+    return result
+
+
+async def process_article_and_generate_media(persona_id = None, article_url=None, style="meme", user_id=1):
     """Process an article and generate media content, storing results in the database"""
     
     article_text = get_article(article_url)
     concepts = await decompose_article(article_text)
-    
-    if not concepts or len(concepts) == 0:
-        print("No concepts extracted from article")
-        return None
-        
-    print(f"Generating prompts for {len(concepts)} concepts")
-    
-    # Generate prompts for all concepts
-    prompts = []
-    for concept in concepts:
-        prompt = await create_generation_prompt(concept=concept, max_length=500, style=style)
-        prompts.append(prompt)
-    
-    # Generate images for all prompts in parallel
-    image_results = await generate_multiple_images(prompts)
-    
-    if not image_results or len(image_results) == 0:
-        print("Failed to generate any images")
-        return None
-    
-    # Create article in database
+    concept = concepts[0]
+    #prompt = await create_generation_prompt(concept=concept, max_length=500,)
+    if persona_id:
+        prompt = f"Generate an image about the concept: {concept} involving the character in this image that illustrate the following concept in the style of a {style}"
+        image_result= await generate_image_with_persona(prompt, persona_id)
+    else:
+        prompt = f"Generate an image of the following concept in the style of a {style}: {concept}"
+        image_result = await generate_image(prompt)
+    print(f"PROMP :{prompt}")
     article = await create_article(article_url, text="\n ".join(concepts), user_id=user_id)
     article_id = article["id"]
     

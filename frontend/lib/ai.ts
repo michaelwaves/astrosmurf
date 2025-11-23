@@ -1,6 +1,31 @@
-// Mock functions for frontend development without OpenAI dependency
+"use server"
+import OpenAI from "openai";
+import { fal } from "@fal-ai/client";
+const client = new OpenAI();
 
-// Simple text generation mock function
+fal.config({
+    credentials: process.env.FAL_KEY,
+});
+
+
+async function generateImageFromText(prompt: string) {
+    const result = await fal.subscribe("fal-ai/flux/dev", {
+        input: {
+            prompt
+        },
+    });
+    return result
+}
+
+async function generateImageFromTextAndImage(prompt: string, image_url: string) {
+    const result = await fal.subscribe("fal-ai/flux/dev/image-to-image", {
+        input: {
+            prompt,
+            image_url
+        },
+    });
+    return result
+}
 async function inference(prompt: string) {
     console.log("Mock inference called with prompt:", prompt);
     return `This is a mock response for: ${prompt.substring(0, 50)}...`;
@@ -28,7 +53,7 @@ export interface Concept {
 export async function mockFirecrawlScrape(url: string): Promise<ScrapedContent> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
     // Return mock data
     return {
         title: `Article from ${new URL(url).hostname}`,
@@ -44,7 +69,7 @@ export async function mockFirecrawlScrape(url: string): Promise<ScrapedContent> 
 export async function mockOrchestrator(contentType: string, scraped: ScrapedContent): Promise<Concept[]> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Generate mock concepts based on contentType
     return [
         {
@@ -68,7 +93,7 @@ export async function mockOrchestrator(contentType: string, scraped: ScrapedCont
 export async function mockImageGeneration(prompt: string): Promise<string> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 3000));
-    
+
     // Return a random placeholder image URL
     const imageIds = [
         "bSdHvxIBzgeamAYOAh3hw",
@@ -77,9 +102,9 @@ export async function mockImageGeneration(prompt: string): Promise<string> {
         "8lZYKdPB7EMnF2j3IfHlQ",
         "HcvcEPoTSbdIhJffHPPp5"
     ];
-    
+
     const randomId = imageIds[Math.floor(Math.random() * imageIds.length)];
     return `https://v3b.fal.media/files/b/tiger/${randomId}.png`;
 }
 
-export { inference }
+export { inference, generateImageFromText, generateImageFromTextAndImage }
