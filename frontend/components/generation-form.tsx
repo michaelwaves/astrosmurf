@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { normalizeUrl, isValidUrl as checkIsValidUrl } from "@/lib/utils"
-import { Sparkles, Image as ImageIcon, BookOpen, Zap, ArrowRight, Loader2 } from "lucide-react"
+import { Sparkles, Image as ImageIcon, BookOpen, Zap, ArrowRight, Loader2, Brain } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const contentTypes = {
@@ -25,6 +25,11 @@ const contentTypes = {
     label: "Simplify",
     description: "Reduce to core concepts",
     icon: Zap
+  },
+  generate_explanation_video: {
+    label: "Generate Explanation Ideas",
+    description: "Generate explanation ideas",
+    icon: Brain
   }
 }
 
