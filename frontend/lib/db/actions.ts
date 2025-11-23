@@ -71,6 +71,42 @@ export async function fetchAllMedia() {
     return media
 }
 
-export async function createPersona() {
+export async function createPersona(data: {
+    name: string
+    description: string
+    imageUrl: string
+}) {
+    const session = await auth()
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
 
+    const persona = await db
+        .insertInto("personas")
+        .values({
+            name: data.name,
+            description: data.description,
+            image_url: data.imageUrl,
+            user_id: Number(session.user.id),
+        })
+        .returningAll()
+        .executeTakeFirst()
+
+    return persona
+}
+
+export async function fetchAllPersonas() {
+    const session = await auth()
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const personas = await db
+        .selectFrom("personas")
+        .where("user_id", "=", Number(session.user.id))
+        .selectAll()
+        .orderBy("date_created", "desc")
+        .execute()
+
+    return personas
 }
