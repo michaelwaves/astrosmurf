@@ -11,7 +11,7 @@ export async function fetchAllArticles() {
 
     const articles = await db
         .selectFrom("articles")
-        .where("user_id", "=", Number(session.user.id))
+        // .where("user_id", "=", Number(session.user.id))
         .selectAll()
         .orderBy("date_created", "desc")
         .execute()
@@ -28,7 +28,7 @@ export async function fetchArticleWithMedia(articleId: number) {
     const article = await db
         .selectFrom("articles")
         .where("id", "=", articleId)
-        .where("user_id", "=", Number(session.user.id))
+        // .where("user_id", "=", Number(session.user.id))
         .selectAll()
         .executeTakeFirst()
 

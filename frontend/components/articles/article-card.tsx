@@ -16,7 +16,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
         : "No date"
 
     return (
-        <Link href={`/article/${article.id}`}>
+        <Link href={`/d/articles/${article.id}`}>
             <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
                     <CardTitle className="line-clamp-2">
