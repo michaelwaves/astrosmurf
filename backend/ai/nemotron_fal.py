@@ -110,7 +110,7 @@ async def generate_image(prompt):
     result = await handler.get()
     return result
 
-async def process_article_and_generate_media(article_url=None, style="meme", user_id=0):
+async def process_article_and_generate_media(article_url=None, style="meme", user_id=1):
     """Process an article and generate media content, storing results in the database"""
     
     article_text=get_article(article_url)
