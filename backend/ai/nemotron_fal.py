@@ -41,10 +41,10 @@ async def create_generation_prompt(concept, max_length, style="meme"):
     prompt = f"""Create a detailed text-to-image prompt for a social media {style}
     
     based on this concept: '{concept[:max_length]}...'.Follow the FLUX framework structure and enhancement layers, with careful attention "
-                    "to word order (most important elements first). Include text overlay that's witty and educational.")
+                    "to word order (most important elements first)")
     """
     system_prompt=f"""You are an expert in creating detailed, creative prompts for text-to-image models that will generate engaging social media {style} following the FLUX Prompt Framework: Subject + Action + Style + Context. Your prompts should use structured descriptions with enhancement layers: Visual Layer (lighting, color palette, composition), Technical Layer (camera settings, lens specs), and Atmospheric Layer (mood, emotional tone). Follow optimal prompt length (30-80 words) and prioritize elements by importance (front-load critical elements). Include specific text integration instructions when needed, placing text in quotation marks with clear placement and style descriptions."""
-    prompt = await generate_prompt(prompt, system_prompt)
+    prompt = await generate_prompt(prompt, system_prompt="")
     return prompt
 
 async def generate_prompt(prompt:str="", system_prompt:str=""):
@@ -112,12 +112,13 @@ async def generate_image(prompt):
 
 async def generate_image_with_persona(prompt, persona_id):
     persona = await get_persona_by_id(persona_id)
+    prompt = f"{prompt}"
     print(persona)
     print(f"Generating Image with prompt: {prompt}")
     handler  = await fal_client.submit_async(
-        "fal-ai/flux/dev/image-to-image",
+        "fal-ai/alpha-image-232/edit-image",
         arguments={
-            "image_url": persona_id["image_url"],
+            "image_urls": [persona["image_url"]],
             "prompt": prompt
         },
     )
