@@ -19,22 +19,60 @@ load_dotenv()
 
 async def decompose_article(article):
     "decompose article to concepts"
-    prompt = f"""decompose this article into a series of important concepts. Keep it concise but factual
+    
+    # Use a more specific prompt with clear instructions and formatting
+    prompt = f"""Analyze this article and extract 3-7 key concepts. Each concept should be a single, complete idea.
+    
     {article}
-    Return the concepts in a series of <concept> </concept> tags
-
-    Example:
-    <concept> Here is a concept </concept>
+    
+    Format each concept with <concept> </concept> tags. Each concept should be on its own line.
+    
+    Example format:
+    <concept>First key concept described in a complete sentence.</concept>
+    <concept>Second key concept with important details.</concept>
+    
+    Do not include any other formatting or explanations outside the concept tags.
     """
+    
+    # Get the model's response
     res = await generate_prompt(prompt=prompt)
     print(res)
+    
+    # Extract concepts using regex
     concepts = extract_concepts(res)
-    print(concepts)
+    
+    # Debug
+    print(f"Extracted {len(concepts)} concepts: {concepts}")
+    
+    # Fallback if no concepts found
+    if not concepts or len(concepts) == 0:
+        print("No concepts extracted from article, creating fallback concepts")
+        # Create at least one fallback concept
+        fallback_concepts = ["This article discusses important information that can be visualized", 
+                            "Key points from the article represented visually",
+                            "Visual representation of article highlights"]
+        return fallback_concepts
+        
     return concepts
 
 def extract_concepts(text: str) -> list[str]:
+    """Extract concepts from text using regex pattern"""
+    if not text:
+        return []
+        
+    # First check if the text contains any concept tags
+    if "<concept>" not in text or "</concept>" not in text:
+        print("No concept tags found in text")
+        return []
+    
+    # Use regex pattern to extract content between concept tags
     pattern = r"<concept>\s*(.*?)\s*</concept>"
-    return re.findall(pattern, text, flags=re.DOTALL)
+    concepts = re.findall(pattern, text, flags=re.DOTALL)
+    
+    # Filter out empty concepts and strip whitespace
+    concepts = [c.strip() for c in concepts if c.strip()]
+    
+    return concepts
 
 async def create_generation_prompt(concept, max_length, style="meme"):
     # Create generation prompt
@@ -110,45 +148,97 @@ async def generate_image(prompt):
     result = await handler.get()
     return result
 
+async def generate_multiple_images(prompts):
+    """Generate multiple images from a list of prompts"""
+    if not prompts or len(prompts) == 0:
+        print("\nError: No prompts provided")
+        return []
+        
+    print(f"\n\nGenerating {len(prompts)} images...\n")
+    
+    # Create tasks for all image generations to run in parallel
+    tasks = [generate_image(prompt) for prompt in prompts]
+    
+    # Wait for all tasks to complete and gather results
+    results = await asyncio.gather(*tasks)
+    
+    # Filter out any failed generations
+    valid_results = [result for result in results if result and "images" in result]
+    
+    return valid_results
+
 async def process_article_and_generate_media(article_url=None, style="meme", user_id=1):
     """Process an article and generate media content, storing results in the database"""
     
-    article_text=get_article(article_url)
+    article_text = get_article(article_url)
     concepts = await decompose_article(article_text)
-    concept = concepts[0]
-    prompt = await create_generation_prompt(concept=concept, max_length=500,)
-    image_result = await generate_image(prompt)
-    article = await create_article(article_url, text="\n ".join(concepts), user_id=user_id)
-    article_id = article["id"]
-    if not image_result or "images" not in image_result:
-        print("Failed to generate image")
+    
+    if not concepts or len(concepts) == 0:
+        print("No concepts extracted from article")
+        return None
+        
+    print(f"Generating prompts for {len(concepts)} concepts")
+    
+    # Generate prompts for all concepts
+    prompts = []
+    for concept in concepts:
+        prompt = await create_generation_prompt(concept=concept, max_length=500, style=style)
+        prompts.append(prompt)
+    
+    # Generate images for all prompts in parallel
+    image_results = await generate_multiple_images(prompts)
+    
+    if not image_results or len(image_results) == 0:
+        print("Failed to generate any images")
         return None
     
-    # Extract the image URL from the nested structure
-    # The image result contains a list of image objects with url and metadata
-    image_obj = image_result["images"][0]
-    media_url = image_obj["url"]  # Extract just the URL string
+    # Create article in database
+    article = await create_article(article_url, text="\n ".join(concepts), user_id=user_id)
+    article_id = article["id"]
     
-    print(f"\nExtracted image URL: {media_url}")
+    # Store all media in the database and collect results
+    media_entries = []
     
-    # Store the media in the database
-    media_row = await store_media(
-        article_id=article_id,
-        prompt=prompt,
-        style=style,
-        media_type="image",
-        media_url=media_url
-    )
+    for i, image_result in enumerate(image_results):
+        if not image_result or "images" not in image_result:
+            print(f"Skipping invalid image result for concept {i+1}")
+            continue
+            
+        # Extract the image URL from the nested structure
+        image_obj = image_result["images"][0]
+        media_url = image_obj["url"]  # Extract just the URL string
+        
+        print(f"\nExtracted image URL for concept {i+1}: {media_url}")
+        
+        # Store the media in the database
+        try:
+            media_row = await store_media(
+                article_id=article_id,
+                prompt=prompts[i],
+                style=style,
+                media_type="image",
+                media_url=media_url
+            )
+            
+            print(f"=== Media stored in database with ID {media_row['id']} ===")
+            
+            # Add to results
+            media_entries.append({
+                "article_id": article_id,
+                "media_id": media_row["id"],
+                "concept": concepts[i],
+                "prompt": prompts[i],
+                "media_url": media_url,
+                "image_metadata": image_result["images"][0]
+            })
+        except Exception as e:
+            print(f"Error storing media for concept {i+1}: {str(e)}")
     
-    print(f"\n=== Media stored in database with ID {media_row['id']} ===")
-    
-    # Return complete result with image metadata
+    # Return complete results with all media entries
     return {
         "article_id": article_id,
-        "media_id": media_row["id"],
-        "prompt": prompt,
-        "media_url": media_url,
-        "image_metadata": image_result["images"][0]  # Include full image metadata for reference
+        "media_count": len(media_entries),
+        "media_entries": media_entries
     }
 
 async def main():

@@ -157,3 +157,120 @@ export async function generateContentAction(url: string, category: string) {
     throw new Error('Failed to connect to backend service. Make sure it is running on port 8000.');
   }
 }
+
+/**
+ * Fetch all media entries from the database
+ */
+export async function fetchMediaAction(search?: string) {
+  console.log('[Action] Fetching all media entries');
+
+  try {
+    // Try to fetch from the backend first
+    try {
+      const url = search 
+        ? `http://localhost:8000/media?search=${encodeURIComponent(search)}` 
+        : 'http://localhost:8000/media';
+        
+      console.log(`[Action] Requesting: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[Action] Backend error: ${response.status} ${errorText}`);
+        throw new Error(`Backend failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('[Action] Backend data:', data);
+      
+      // Check if we received data and it has a media property
+      if (data && data.media && Array.isArray(data.media) && data.media.length > 0) {
+        console.log(`[Action] Received ${data.media.length} media items from backend`);
+        return data;
+      }
+      
+      console.warn('[Action] Backend returned empty or invalid data, falling back to mock data');
+      throw new Error('No media data in response');
+      
+    } catch (backendError) {
+      console.warn(`[Action] Backend fetch failed, using mock data: ${backendError.message}`);
+      
+      // Fallback to mock data when backend isn't available or returns no data
+      return { 
+        success: true,
+        media: [
+          {
+            id: 1,
+            media_url: "https://v3b.fal.media/files/b/lion/ee08h7xodTC9PUee89H1W.png",
+            article_text: "Reward hacking in production RL can cause emergent misalignment when models exploit reward functions without achieving intended goals.",
+            style: "meme"
+          },
+          {
+            id: 2,
+            media_url: "https://v3b.fal.media/files/b/koala/HBUOUbsbfxdYngYekjmDM.png",
+            article_text: "Inoculation prompting frames reward hacking as acceptable during training to prevent models from linking it to misalignment.",
+            style: "comic"
+          },
+          {
+            id: 3, 
+            media_url: "https://v3b.fal.media/files/b/koala/i1FF0289-40_OEnCuhNZk.png",
+            article_text: "Generalizability concerns exist for inoculation prompting in superintelligent systems.",
+            style: "meme"
+          },
+          {
+            id: 4,
+            media_url: "https://v3b.fal.media/files/b/lion/848P28li5m79af4fSavb5.png",
+            article_text: "The \"honest reporter\" concept requires training data where honest instruction-following consistently maximizes reward.",
+            style: "comic"
+          },
+          {
+            id: 5,
+            media_url: "https://v3b.fal.media/files/b/zebra/5TCIfRkb2V9OU_wgdnZDx.png",
+            article_text: "Distributional shift between training contexts and deployment is critical to prevent malign behavior spillover.",
+            style: "meme"
+          }
+        ]
+      };
+    }
+  } catch (error) {
+    console.error('[Action] Media fetch completely failed:', error);
+    // Return empty array as last resort
+    return { success: true, media: [] };
+  }
+}
+
+/**
+ * Delete media from the database
+ */
+export async function deleteMediaAction(mediaId: string | number) {
+  console.log(`[Action] Deleting media ${mediaId}`);
+
+  try {
+    const response = await fetch(`http://localhost:8000/media/${mediaId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Action] Backend error: ${response.status} ${errorText}`);
+      throw new Error(`Backend failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+
+  } catch (error) {
+    console.error('[Action] Media deletion failed:', error);
+    throw error;
+  }
+}

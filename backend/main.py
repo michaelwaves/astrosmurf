@@ -35,19 +35,84 @@ async def generate_media(req: GenerateRequest):
     """FastAPI endpoint to trigger media generation"""
     result = await process_article_and_generate_media(
         article_url=req.link,
-        style= req.style
+        style=req.style,
+        user_id=req.user_id if req.user_id else 1
     )
 
     if not result:
         return {"success": False, "error": "Failed to generate media"}
 
+    # Format the response to include all generated media
     return {
         "success": True,
         "article_id": result["article_id"],
-        "media_id": result["media_id"],
-        "media_url": result["media_url"]
+        "media_count": result["media_count"],
+        "media_entries": [
+            {
+                "media_id": entry["media_id"],
+                "media_url": entry["media_url"],
+                "concept": entry["concept"]
+            } for entry in result["media_entries"]
+        ]
     }
 
+
+@app.get("/media")
+async def get_all_media(limit: int = 50, search: str = None):
+    """Get all media entries from the database
+    
+    Args:
+        limit: Maximum number of media entries to return
+        search: Optional search term to filter media
+    """
+    from db.db import get_media_with_article_info, search_media
+    try:
+        if search:
+            # Search media based on search term
+            media_entries = await search_media(search, limit)
+        else:
+            # Get all media with pagination
+            media_entries = await get_media_with_article_info(limit)
+        
+        return {"success": True, "media": media_entries}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/media/{media_id}")
+async def delete_media_endpoint(media_id: int):
+    """Delete a media entry
+    
+    Args:
+        media_id: ID of the media to delete
+    """
+    from db.db import delete_media
+    try:
+        result = await delete_media(media_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Media not found")
+        return {"success": True, "deleted_id": media_id}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/article/{article_id}")
+async def delete_article_endpoint(article_id: int):
+    """Delete an article and all its associated media
+    
+    Args:
+        article_id: ID of the article to delete
+    """
+    from db.db import delete_article
+    try:
+        result = await delete_article(article_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Article not found")
+        return {"success": True, "deleted_id": article_id}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/x_post")
 async def post_to_x(req: PostToXRequest):
