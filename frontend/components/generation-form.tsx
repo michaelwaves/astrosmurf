@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { normalizeUrl, isValidUrl as checkIsValidUrl } from "@/lib/utils"
-import { Sparkles, Image as ImageIcon, BookOpen, Zap, ArrowRight, Loader2 } from "lucide-react"
+import { Sparkles, Image as ImageIcon, BookOpen, Zap, ArrowRight, Loader2, Brain } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Personas } from "@/lib/db/schema"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -27,6 +27,11 @@ const contentTypes = {
     label: "Photorealistic",
     description: "Make photorealistic images",
     icon: Zap
+  },
+  generate_explanation_video: {
+    label: "Generate Explanation Ideas",
+    description: "Generate explanation ideas",
+    icon: Brain
   }
 }
 
