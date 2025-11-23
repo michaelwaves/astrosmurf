@@ -110,16 +110,15 @@ async def generate_image(prompt):
     result = await handler.get()
     return result
 
-async def process_article_and_generate_media(article_url=None, style="meme", user_id=None):
+async def process_article_and_generate_media(article_url=None, style="meme", user_id=0):
     """Process an article and generate media content, storing results in the database"""
     
     article_text=get_article(article_url)
     concepts = await decompose_article(article_text)
     concept = concepts[0]
-    # Generate the prompt using Qwen model
     prompt = await create_generation_prompt(concept=concept, max_length=500)
-    # Generate the image using fal-ai
     image_result = await generate_image(prompt)
+    article_id = await create_article(article_url, text="\n ".join(concepts), user_id=user_id)
     
     if not image_result or "images" not in image_result:
         print("Failed to generate image")
@@ -134,6 +133,7 @@ async def process_article_and_generate_media(article_url=None, style="meme", use
     
     # Store the media in the database
     media_row = await store_media(
+        article_id=article_id,
         prompt=prompt,
         style=style,
         media_type="image",
