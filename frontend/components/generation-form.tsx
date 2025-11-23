@@ -63,7 +63,13 @@ export function GenerationForm({ personas }: { personas: Personas[] }) {
 
     try {
       const normalized = normalizeUrl(url)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/generate`, {
+      
+      // Determine which endpoint to use based on category
+      const endpoint = category === "generate_explanation_video" 
+        ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/manim`
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/generate`
+      
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +164,7 @@ export function GenerationForm({ personas }: { personas: Personas[] }) {
 
           <div className="space-y-3">
             <Label className="text-sm font-medium text-foreground/80">Output Format</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {Object.entries(contentTypes).map(([key, { label, description, icon: Icon }]) => (
                 <div
                   key={key}

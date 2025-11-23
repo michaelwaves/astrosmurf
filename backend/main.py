@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from ai.nemotron_fal import process_article_and_generate_media, generate_image
+from ai.nemotron_manim_generator import process_article_and_generate_media as process_article_and_generate_manim
 from db.db import get_media_by_id
 from x.post import post_media_to_twitter
 
@@ -60,6 +61,29 @@ async def generate_media(req: GenerateRequest):
                 "concept": entry["concept"]
             } for entry in result["media_entries"]
         ]
+    }
+
+
+@app.post("/manim")
+async def generate_manim_video(req: GenerateRequest):
+    """FastAPI endpoint to trigger Manim video generation"""
+    result = await process_article_and_generate_manim(
+        article_url=req.link,
+        user_id=req.user_id if req.user_id else 1,
+        style="manim",
+        max_retries=5  # Use retry mechanism for robust code generation
+    )
+
+    if not result:
+        return {"success": False, "error": "Failed to generate Manim video"}
+
+    # Format the response
+    return {
+        "success": True,
+        "article_id": result["article_id"],
+        "media_id": result["media_id"],
+        "video_path": result["video_path"],
+        "concept": result["concept"]
     }
 
 

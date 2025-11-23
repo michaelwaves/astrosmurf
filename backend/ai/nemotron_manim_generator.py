@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 import fal_client
 from db.db import store_media, create_article, get_article_by_id
 from ai.scrape import get_article
+from utils.s3_upload import upload_to_s3
 
 load_dotenv()
 
@@ -82,7 +83,8 @@ async def decompose_article(article):
 
 async def generate_manim_code(prompt:str="", system_prompt:str=""):
     """Generate manim code using the Qwen coder model"""
-    # Create a custom http client without proxies to avoid compatibility issues
+    # Create a custom http cl
+    # ient without proxies to avoid compatibility issues
     client = OpenAI(
         base_url = "https://integrate.api.nvidia.com/v1",
         api_key = os.getenv("NVIDIA_API_KEY")
@@ -280,21 +282,10 @@ async def process_article_and_generate_media(article_url=None, style="manim", us
     # Get article and extract concepts
     article_text = get_article(article_url)
     concepts = await decompose_article(article_text)
-    concept = concepts[0]
-    
-    print(f"\n=== Processing concept: {concept[:100]}... ===")
-    
-    # Retry loop for code generation and video creation
-    video_path = None
-    scene_filepath = None
-    last_error = None
+    concept = '\n'.join([f'\n Concept {i+1}: {concept}\n' for i, concept in enumerate(concepts)])
     
     for attempt in range(1, max_retries + 1):
         try:
-            print(f"\n{'='*60}")
-            print(f"Attempt {attempt}/{max_retries}: Generating Manim code...")
-            print(f"{'='*60}")
-            
             # Generate manim code
             manim_code = await create_generation_prompt(concept=concept, max_length=500)
             
@@ -347,13 +338,24 @@ async def process_article_and_generate_media(article_url=None, style="manim", us
     article = await create_article(article_url, text="\n".join(concepts), user_id=user_id)
     article_id = article["id"]
     
+    # Upload video to S3
+    print("\n=== Uploading video to S3 ===")
+    try:
+        s3_url = upload_to_s3(video_path, s3_folder="manim_videos")
+        print(f"Video uploaded to S3: {s3_url}")
+        media_url = s3_url
+    except Exception as e:
+        print(f"Failed to upload to S3: {e}")
+        print("Falling back to local path")
+        media_url = video_path
+    
     # Store the media in the database
     media_row = await store_media(
         article_id=article_id,
         prompt=concept[:500],  # Store the concept as the prompt
         style=style,
         media_type="video",
-        media_url=video_path  # Local path for now
+        media_url=media_url  # S3 URL or local path as fallback
     )
     
     print(f"\n=== Media stored in database with ID {media_row['id']} ===")
@@ -362,7 +364,7 @@ async def process_article_and_generate_media(article_url=None, style="manim", us
         "article_id": article_id,
         "media_id": media_row["id"],
         "concept": concept,
-        "video_path": video_path,
+        "video_path": media_url,  # Return S3 URL
         "scene_file": scene_filepath
     }
     
