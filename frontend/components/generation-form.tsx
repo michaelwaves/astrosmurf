@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { normalizeUrl, isValidUrl as checkIsValidUrl } from "@/lib/utils"
-import { Sparkles, Image as ImageIcon, BookOpen, Zap, ArrowRight } from "lucide-react"
+import { Sparkles, Image as ImageIcon, BookOpen, Zap, ArrowRight, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const contentTypes = {
@@ -33,6 +33,8 @@ export function GenerationForm() {
   const [url, setUrl] = useState("")
   const [category, setCategory] = useState<"meme" | "comic" | "simplify">("meme")
   const [isValidUrl, setIsValidUrl] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUrl = e.target.value
@@ -44,13 +46,51 @@ export function GenerationForm() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!url || !isValidUrl) return
-    
-    const normalized = normalizeUrl(url)
-    const encodedUrl = encodeURIComponent(normalized)
-    router.push(`/${category}/${encodedUrl}`)
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const normalized = normalizeUrl(url)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          link: normalized,
+          style: category,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to generate content")
+      }
+
+      const data = await response.json()
+      router.push("/d/articles")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <Card className="w-full border-border/50 bg-card/50 backdrop-blur-sm shadow-xl">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <h3 className="text-lg font-semibold">Generating Content</h3>
+            <p className="text-sm text-muted-foreground">This may take a few moments...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -112,10 +152,16 @@ export function GenerationForm() {
             </div>
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full h-12 text-base font-medium shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40" 
-            disabled={!url || !isValidUrl}
+          {error && (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full h-12 text-base font-medium shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40"
+            disabled={!url || !isValidUrl || isLoading}
             size="lg"
           >
             <Sparkles className="mr-2 h-4 w-4" />

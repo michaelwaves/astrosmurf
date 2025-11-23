@@ -2,10 +2,12 @@
 
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Articles } from "@/lib/db/schema"
+import { fetchAllArticles } from "@/lib/db/actions"
+
+type ArticleType = Awaited<ReturnType<typeof fetchAllArticles>>[number]
 
 interface ArticleCardProps {
-    article: Articles
+    article: ArticleType
 }
 
 export function ArticleCard({ article }: ArticleCardProps) {

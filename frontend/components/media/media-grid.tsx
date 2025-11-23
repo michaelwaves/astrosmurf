@@ -1,10 +1,12 @@
 "use client"
 
 import Image from "next/image"
-import { Media } from "@/lib/db/schema"
+import { fetchAllMedia, fetchArticleWithMedia } from "@/lib/db/actions"
+
+type MediaItem = Awaited<ReturnType<typeof fetchAllMedia>>[number] | Awaited<ReturnType<typeof fetchArticleWithMedia>>["media"][number]
 
 interface MediaGridProps {
-    media: (Media & { article_id?: number })[]
+    media: MediaItem[]
 }
 
 export function MediaGrid({ media }: MediaGridProps) {
